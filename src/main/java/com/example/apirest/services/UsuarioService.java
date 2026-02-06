@@ -19,7 +19,7 @@ public class UsuarioService {
     }
 
     public List<Usuario> listarTodosUsuarios(String nome){
-        if(nome.isEmpty()){
+        if(!nome.isEmpty()){
             return usuarioRepository.findAllByNomeContainingIgnoreCase(nome);
         }
         return usuarioRepository.findAll();
