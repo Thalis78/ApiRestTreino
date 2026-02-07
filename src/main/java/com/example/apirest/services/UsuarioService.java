@@ -1,6 +1,7 @@
 package com.example.apirest.services;
 
 import com.example.apirest.dtos.AtualizarUsuarioDTO;
+import com.example.apirest.exception.UsuarioNaoEncontradoException;
 import com.example.apirest.models.Usuario;
 import com.example.apirest.repositorys.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,15 +20,18 @@ public class UsuarioService {
     }
 
     public List<Usuario> listarTodosUsuarios(String nome){
-        if(!nome.isEmpty()){
-            return usuarioRepository.findAllByNomeContainingIgnoreCase(nome);
-        }
-        return usuarioRepository.findAll();
+        List<Usuario> usuarios =  nome.isEmpty()
+                ? usuarioRepository.findAll()
+                : usuarioRepository.findAllByNomeContainingIgnoreCase(nome);
+
+        return Optional.of(usuarios)
+                .filter(lista -> !lista.isEmpty())
+                .orElseThrow(() -> new UsuarioNaoEncontradoException("Nenhum usuário encontrado!"));
     }
 
     public Usuario listarUserPeloId(Long id) {
-        Optional<Usuario> usuario = usuarioRepository.findById(id);
-        return usuario.orElse(null);
+        return usuarioRepository.findById(id)
+                .orElseThrow(() -> new UsuarioNaoEncontradoException("Nenhum usuário encontrado!"));
     }
 
     public Optional<Usuario> buscarUsuarioPorId(Long id){
@@ -35,40 +39,34 @@ public class UsuarioService {
     }
 
     public void atualizarUsuario(Usuario usuario, Long id){
-        Optional<Usuario> usuarioAtualizado = usuarioRepository.findById(id);
+        Usuario usuarioAtualizado = usuarioRepository.findById(id)
+                .orElseThrow(() -> new UsuarioNaoEncontradoException("Nenhum usuário encontrado!"));
 
-        if(usuarioAtualizado.isPresent()){
-            Usuario usuarioNovo = usuarioAtualizado.get();
-            usuarioNovo.setNome(usuario.getNome());
-            usuarioNovo.setEmail(usuario.getEmail());
+        usuarioAtualizado.setNome(usuario.getNome());
+        usuarioAtualizado.setEmail(usuario.getEmail());
 
-            usuarioRepository.save(usuarioNovo);
-        }
+        usuarioRepository.save(usuarioAtualizado);
     }
 
-    public void atualizarUsuarioPeloNomeOuEmail(
-            AtualizarUsuarioDTO usuarioDTO,
-            Long id
-    ) {
-        Optional<Usuario> usuario = usuarioRepository.findById(id);
+    public void atualizarUsuarioPeloNomeOuEmail(AtualizarUsuarioDTO usuarioDTO, Long id) {
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new UsuarioNaoEncontradoException("Nenhum usuário encontrado!"));
 
-        if (usuario.isPresent()) {
-            Usuario usuarioNovo = usuario.get();
-
-            if (usuarioDTO.getNome() != null) {
-                usuarioNovo.setNome(usuarioDTO.getNome());
-            }
-
-            if (usuarioDTO.getEmail() != null) {
-                usuarioNovo.setEmail(usuarioDTO.getEmail());
-            }
-
-            usuarioRepository.save(usuarioNovo);
+        if (usuarioDTO.getNome() != null) {
+            usuario.setNome(usuarioDTO.getNome());
         }
-    }
 
+        if (usuarioDTO.getEmail() != null) {
+            usuario.setEmail(usuarioDTO.getEmail());
+        }
+
+        usuarioRepository.save(usuario);
+    }
 
     public void deletarUsuario(Long id){
+        if(!usuarioRepository.existsById(id)){
+            throw new UsuarioNaoEncontradoException("Nenhum usuário encontrado!");
+        }
         usuarioRepository.deleteById(id);
     }
 
